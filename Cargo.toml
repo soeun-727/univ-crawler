@@ -1,0 +1,16 @@
+[package]
+name = "bot"
+version = "0.1.0"
+edition = "2024"
+
+
+[workspace]
+members = [
+  "apps/bot",
+  "crates/discord",
+  "crates/etc_crawler",
+  "crates/univ_crawler",
+  "crates/rss_crawler",
+  "crates/scheduler",
+]
+resolver = "2"
