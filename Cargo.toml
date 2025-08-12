@@ -1,16 +1,8 @@
 [package]
-name = "bot"
+name = "univ_crawler"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
-
-[workspace]
-members = [
-  "apps/bot",
-  "crates/discord",
-  "crates/etc_crawler",
-  "crates/univ_crawler",
-  "crates/rss_crawler",
-  "crates/scheduler",
-]
-resolver = "2"
+[dependencies]
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+select = "0.5"
