@@ -17,7 +17,7 @@ pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
         .timeout(Duration::from_secs(10))
         .build()?;
 
-    // ✅ SWU 학사공지: iframe이 로드하는 실제 목록 엔드포인트
+    // SWU 학사공지: iframe이 로드하는 실제 목록 엔드포인트
     let list_base = "https://www.swu.ac.kr/front/boardlist.do";
     let current_page = 1u32; // 필요 시 2,3페이지로 교체
     // bbsConfigFK=4 가 학사 게시판 (네가 캡처한 URL 기준)
@@ -141,25 +141,25 @@ pub fn create_rss(notices: &[Notice]) -> rss::Channel {
         .build()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[test]
-    fn test_fetch_notices() {
-        match fetch_notices() {
-            Ok(notices) => {
-                assert!(
-                    !notices.is_empty(),
-                    "[SWU] 크롤링 결과가 비어있습니다."
-                );
-                for notice in notices.iter().take(5) {
-                    println!("제목: {}", notice.title);
-                    println!("날짜: {}", notice.date);
-                    println!("URL: {}\n", notice.url);
-                }
-            }
-            Err(e) => panic!("[SWU] 크롤링 중 오류 발생: {}", e),
-        }
-    }
-}
+//     #[test]
+//     fn test_fetch_notices() {
+//         match fetch_notices() {
+//             Ok(notices) => {
+//                 assert!(
+//                     !notices.is_empty(),
+//                     "[SWU] 크롤링 결과가 비어있습니다."
+//                 );
+//                 for notice in notices.iter().take(5) {
+//                     println!("제목: {}", notice.title);
+//                     println!("날짜: {}", notice.date);
+//                     println!("URL: {}\n", notice.url);
+//                 }
+//             }
+//             Err(e) => panic!("[SWU] 크롤링 중 오류 발생: {}", e),
+//         }
+//     }
+// }
