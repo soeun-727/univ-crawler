@@ -20,7 +20,7 @@ pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
     // SWU 학사공지: iframe이 로드하는 실제 목록 엔드포인트
     let list_base = "https://www.swu.ac.kr/front/boardlist.do";
     let current_page = 1u32; // 필요 시 2,3페이지로 교체
-    // bbsConfigFK=4 가 학사 게시판 (네가 캡처한 URL 기준)
+    // bbsConfigFK=4 가 학사 게시판
     let url = format!(
         "{}?currentPage={}&menuGubun=1&siteGubun=1&bbsConfigFK=4&searchField=ALL&searchValue=&searchLowItem=ALL",
         list_base, current_page

@@ -167,7 +167,7 @@ fn parse_fn_go_view(onclick: &str) -> (String, String) {
     }
 }
 
-// RSS 생성 (숙명 스타일 그대로)
+// RSS 생성
 use rss::{ChannelBuilder, ItemBuilder};
 
 pub fn create_rss(notices: &[Notice]) -> rss::Channel {
