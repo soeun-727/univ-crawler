@@ -9,7 +9,6 @@ pub fn crawl(school_name: Option<&str>) -> Result<Vec<sookmyung::Notice>, Box<dy
             let notices = sookmyung::fetch_notices()?;
             Ok(notices)
         }
-        /* 크롤러 아직 미구현
         Some("dongduk") => {
             println!("<<동덕여자대학교 공지사항>>");
             let notices = dongduk::fetch_notices()?;
@@ -20,7 +19,6 @@ pub fn crawl(school_name: Option<&str>) -> Result<Vec<sookmyung::Notice>, Box<dy
             let notices = seoul::fetch_notices()?;
             Ok(notices)
         }
-        */
         Some(other) => {
             println!("학교 '{}'는 없습니다.", other);
             Ok(Vec::new())
