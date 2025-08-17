@@ -1,44 +1,32 @@
 name: Scrape Notices
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "0 * * * *"   # 매 시간마다 실행
+  workflow_dispatch:       # 수동 실행 가능
 
 jobs:
-  build:
+  scrape:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
-      - name: Build project
-        run: cargo build --release
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
 
       - name: Run scraper
         run: cargo run --release
 
-      # school-rss 폴더에 생성된 rss.xml 파일들을 Pages artifact로 업로드
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+      - name: Upload RSS artifacts
+        uses: actions/upload-artifact@v4   # ✅ 최신 버전으로 업데이트
         with:
-          path: ./school-rss
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
+          name: rss-files
+          path: school-rss/
