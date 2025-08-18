@@ -9,7 +9,19 @@ use std::time::Duration;
 use crate::schools::sookmyung;
 pub type Notice = sookmyung::Notice;
 
-/// 동덕여대 학사 공지 1페이지 수집 (제목 가공 없음)
+/// "YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD" 형태 감지
+fn is_date_like(s: &str) -> bool {
+    let t = s.trim().trim_end_matches('.');
+    let sep = if t.contains('.') { '.' } else if t.contains('-') { '-' } else if t.contains('/') { '/' } else { return false };
+    let parts: Vec<_> = t.split(sep).map(|x| x.trim()).collect();
+    if parts.len() != 3 { return false; }
+    let (y, m, d) = (parts[0], parts[1], parts[2]);
+    y.len() == 4 && y.chars().all(|c| c.is_ascii_digit())
+        && m.chars().all(|c| c.is_ascii_digit())
+        && d.chars().all(|c| c.is_ascii_digit())
+}
+
+/// 동덕여대 학사 공지 1페이지 수집
 pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
@@ -31,7 +43,7 @@ pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
 
     // 공지 1건 = ul.board-basic > li
     for li in document.find(Class("board-basic").descendant(Name("li"))) {
-        // 제목: a.subTit 전체 텍스트(가공 없음)
+        // 제목: dt > a.subTit
         let a = li
             .find(Name("dt").descendant(Name("a").and(Class("subTit"))))
             .next();
@@ -41,15 +53,24 @@ pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
             .map(|n| n.text().trim().to_string())
             .unwrap_or_else(|| "(제목 없음)".to_string());
 
-        // 날짜: dd > span.p_hide (마지막)
-        let date = li
-            .find(Name("dd").descendant(Class("p_hide")))
-            .collect::<Vec<_>>()
-            .last()
-            .map(|d| d.text().trim().to_string())
-            .unwrap_or_else(|| "N/A".to_string());
+        // 날짜: li 내부 텍스트 중 "날짜처럼 보이는" 것만 추출 (조회수/댓글수 등 제외)
+        let mut date = String::new();
 
-        // 상세 URL: href의 schM=view 우선, 없으면 onclick 파싱
+        // 우선 dd > .p_hide 스캔
+        for node in li.find(Name("dd").descendant(Class("p_hide"))) {
+            let t = node.text();
+            if is_date_like(&t) { date = t.trim().to_string(); break; }
+        }
+        // 여전히 비었으면 다른 셀들에서도 탐색
+        if date.is_empty() {
+            for node in li.find(Name("span").or(Name("dd")).or(Name("div"))) {
+                let t = node.text();
+                if is_date_like(&t) { date = t.trim().to_string(); break; }
+            }
+        }
+        if date.is_empty() { date = "N/A".to_string(); }
+
+        // 상세 URL: href의 schM=view 우선, 없으면 onclick="fn_goView('id', false, 'no', '')" 파싱
         let detail_url = if let Some(href) = find_view_href_in_li(&li) {
             href
         } else {
@@ -57,7 +78,7 @@ pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
             if let Some((id, no)) = parse_fn_go_view(onclick) {
                 format!("{base_url}?schM=view&id={id}&etc1={no}")
             } else {
-                // 마지막 폴백(디버깅용)
+                // 폴백(디버깅용)
                 format!("javascript:{onclick}")
             }
         };
@@ -80,7 +101,7 @@ pub fn create_rss(notices: &[Notice]) -> rss::Channel {
             ItemBuilder::default()
                 .title(n.title.clone())
                 .link(n.url.clone())
-                .pub_date(n.date.clone())
+                .pub_date(n.date.clone()) // RFC 변환은 main에서 normalize
                 .build()
         })
         .collect::<Vec<_>>();
@@ -93,7 +114,7 @@ pub fn create_rss(notices: &[Notice]) -> rss::Channel {
         .build()
 }
 
-/* ─── 아래는 비공개 유틸 ─── */
+/* ─── 유틸 ─── */
 
 fn find_view_href_in_li(li: &select::node::Node) -> Option<String> {
     for a in li.find(Name("a")) {
@@ -111,7 +132,7 @@ fn find_view_href_in_li(li: &select::node::Node) -> Option<String> {
 }
 
 fn parse_fn_go_view(onclick: &str) -> Option<(String, String)> {
-    // onclick="fn_goView('90378', false, '8901', '')"
+    // 예: fn_goView('90378', false, '8901', '')
     let marker = "fn_goView(";
     let start = onclick.find(marker)? + marker.len();
     let end = onclick[start..].find(')')? + start;
@@ -128,18 +149,3 @@ fn parse_fn_go_view(onclick: &str) -> Option<(String, String)> {
         None
     }
 }
-
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn print_dong_page() {
-//         let notices = fetch_notices().expect("fetch_notices failed");
-//         assert!(notices.len() > 0, "no notices parsed");
-//         for n in notices.iter().take(5) {
-//             println!("{} | {} | {}", n.date, n.title, n.url);
-//         }
-//     }
-// }
