@@ -72,7 +72,7 @@ pub fn fetch_notices() -> Result<Vec<Notice>, Box<dyn Error>> {
             .next()
             .and_then(|td| td.find(Name("a")).next())
             .and_then(|a| a.attr("href"))
-            .map(|s| format!("https://www.sookmyung.ac.kr{}", s))
+            .map(|s| format!("https://www.sookmyung.ac.kr/kr/news/important-notice.do{}", s))
             .unwrap_or_default();
 
         notices.push(Notice { title, date, url });
@@ -90,7 +90,7 @@ pub fn create_rss(notices: &[Notice]) -> rss::Channel {
             .title(notice.title.clone())
             .link(notice.url.clone())
             .pub_date(notice.date.clone())
-            .build()  // <-- 그냥 build(), ? 제거
+            .build()  
     }).collect::<Vec<_>>();
 
     let channel = ChannelBuilder::default()
@@ -98,7 +98,7 @@ pub fn create_rss(notices: &[Notice]) -> rss::Channel {
         .link("https://www.sookmyung.ac.kr/kr/news/important-notice.do")
         .description("숙명여대 주요 공지 RSS 피드")
         .items(items)
-        .build();  // <-- 그냥 build(), ? 제거
+        .build(); 
 
     channel
 }
