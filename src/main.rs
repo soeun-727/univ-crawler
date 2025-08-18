@@ -62,10 +62,21 @@ async fn main() -> std::io::Result<()> {
 
 /* ───────────── 날짜 추출/변환 & 절대 URL 정규화 ───────────── */
 
-/// 문자열 토큰들에서 YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD 패턴을 찾아냄
+/// 문자열 전체에서 숫자/구분자만 남겨 토큰화 후 YYYY.MM.DD/… 패턴을 탐지
 fn extract_date_token(s: &str) -> Option<(i32, u32, u32)> {
+    // 1) 숫자/구분자('.','-','/')만 남기고 그 외는 공백으로 치환
+    let mut filtered = String::with_capacity(s.len());
+    for ch in s.chars() {
+        if ch.is_ascii_digit() || ch == '.' || ch == '-' || ch == '/' {
+            filtered.push(ch);
+        } else {
+            filtered.push(' ');
+        }
+    }
+
+    // 2) 공백 기준으로 토큰화 → 각 토큰에서 구분자별로 날짜 패턴 시도
     let seps = ['.', '-', '/'];
-    for token in s.split_whitespace() {
+    for token in filtered.split_whitespace() {
         let t = token.trim().trim_end_matches('.');
         for sep in seps {
             let parts: Vec<_> = t.split(sep).map(|x| x.trim()).collect();
@@ -73,9 +84,18 @@ fn extract_date_token(s: &str) -> Option<(i32, u32, u32)> {
                 continue;
             }
             let (y, m, d) = (parts[0], parts[1], parts[2]);
-            if let (Ok(yy), Ok(mm), Ok(dd)) = (y.parse::<i32>(), m.parse::<u32>(), d.parse::<u32>()) {
-                if NaiveDate::from_ymd_opt(yy, mm, dd).is_some() {
-                    return Some((yy, mm, dd));
+            // 연도 4자리 + 월/일 1~2자리 숫자
+            if y.len() == 4
+                && y.chars().all(|c| c.is_ascii_digit())
+                && m.chars().all(|c| c.is_ascii_digit())
+                && d.chars().all(|c| c.is_ascii_digit())
+            {
+                if let (Ok(yy), Ok(mm), Ok(dd)) =
+                    (y.parse::<i32>(), m.parse::<u32>(), d.parse::<u32>())
+                {
+                    if NaiveDate::from_ymd_opt(yy, mm, dd).is_some() {
+                        return Some((yy, mm, dd));
+                    }
                 }
             }
         }
@@ -87,9 +107,8 @@ fn extract_date_token(s: &str) -> Option<(i32, u32, u32)> {
 fn to_rfc2822(date_raw: &str) -> String {
     if let Some((yy, mm, dd)) = extract_date_token(date_raw) {
         if let Some(naive) = NaiveDate::from_ymd_opt(yy, mm, dd) {
-            if let Some(dt) = Local
-                .with_ymd_and_hms(naive.year(), naive.month(), naive.day(), 0, 0, 0)
-                .single()
+            if let Some(dt) =
+                Local.with_ymd_and_hms(naive.year(), naive.month(), naive.day(), 0, 0, 0).single()
             {
                 return dt.to_rfc2822();
             }
@@ -115,7 +134,7 @@ fn normalize_notices(school_key: &str, src: &[sookmyung::Notice]) -> Vec<sookmyu
     src.iter()
         .map(|n| sookmyung::Notice {
             title: n.title.clone(),
-            date: to_rfc2822(&n.date),                    // 조회수 텍스트 섞여도 날짜만 추출
+            date: to_rfc2822(&n.date),                    // 조회수/기타 텍스트 섞여도 날짜만 추출
             url: ensure_absolute_url(school_key, &n.url), // 절대 URL 보장
         })
         .collect()
@@ -199,20 +218,20 @@ async fn rss_endpoint(path: web::Path<(String,)>) -> impl Responder {
 fn generate_rss_xml(school: &str) -> Result<String, IoError> {
     match school {
         "sookmyung" | "sm" | "숙명" => {
-            let items_raw = sookmyung::fetch_notices()
-                .map_err(|e| IoError::new(ErrorKind::Other, e.to_string()))?;
+            let items_raw =
+                sookmyung::fetch_notices().map_err(|e| IoError::new(ErrorKind::Other, e.to_string()))?;
             let items = normalize_notices("sookmyung", &items_raw);
             Ok(sookmyung::create_rss(&items).to_string())
         }
         "seoul" | "swu" | "서울" => {
-            let items_raw = seoul::fetch_notices()
-                .map_err(|e| IoError::new(ErrorKind::Other, e.to_string()))?;
+            let items_raw =
+                seoul::fetch_notices().map_err(|e| IoError::new(ErrorKind::Other, e.to_string()))?;
             let items = normalize_notices("seoul", &items_raw);
             Ok(seoul::create_rss(&items).to_string())
         }
         "dongduk" | "dd" | "동덕" => {
-            let items_raw = dongduk::fetch_notices()
-                .map_err(|e| IoError::new(ErrorKind::Other, e.to_string()))?;
+            let items_raw =
+                dongduk::fetch_notices().map_err(|e| IoError::new(ErrorKind::Other, e.to_string()))?;
             let items = normalize_notices("dongduk", &items_raw);
             Ok(dongduk::create_rss(&items).to_string())
         }
