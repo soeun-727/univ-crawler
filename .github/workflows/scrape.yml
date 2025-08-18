@@ -1,51 +1,42 @@
-#url: https://wuisp-rust-dev.github.io/univ-crawler/sookmyung/rss.xml
-#url: https://wuisp-rust-dev.github.io/univ-crawler/dongduk/rss.xml
-#url: https://wuisp-rust-dev.github.io/univ-crawler/seoul/rss.xml
+#url: https://wuisp-rust-dev.github.io/univ-crawler/school-rss/sookmyung/rss.xml
+#url: https://wuisp-rust-dev.github.io/univ-crawler/school-rss/dongduk/rss.xml
+#url: https://wuisp-rust-dev.github.io/univ-crawler/school-rss/seoul/rss.xml
 
 name: Scrape Notices
 
 on:
-  schedule:
-    - cron: "0 * * * *"   # 매 시간마다 실행
-  workflow_dispatch:       # 수동 실행 가능
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build + Generate RSS (oneshot)
+        run: cargo run --release -- --oneshot
+
+      # ✅ 여기서 'public' 전체를 업로드해야 /school-rss/... 경로가 그대로 유지됩니다.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          toolchain: stable
-          override: true
-
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
-
-      - name: Run scraper
-        run: cargo run --release
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3   # ✅ GitHub Pages용 업로드
-        with:
-          path: ./school-rss
+          path: public
 
   deploy:
     needs: scrape
     runs-on: ubuntu-latest
-    permissions:
-      pages: write        # ✅ Pages 배포 권한
-      id-token: write
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4   # ✅ 공식 Pages 배포 액션
+        uses: actions/deploy-pages@v4
