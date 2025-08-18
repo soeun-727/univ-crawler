@@ -1,4 +1,6 @@
-# url 404 에러가 안잡힘
+#url: https://wuisp-rust-dev.github.io/univ-crawler/sookmyung/rss.xml
+#url: https://wuisp-rust-dev.github.io/univ-crawler/dongduk/rss.xml
+#url: https://wuisp-rust-dev.github.io/univ-crawler/seoul/rss.xml
 
 name: Scrape Notices
 
